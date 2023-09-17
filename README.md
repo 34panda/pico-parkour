@@ -1,5 +1,7 @@
 # pico-parkour
 
-![cart](raiot.p8.png "width=200%")
+![cart](raiot.p8.png "width=200px")
 
-Its a game made with pico-8 engine - WIP
+The entire game data it contained within PNG image above!
+
+Its a game made with pico-8 engine - Work In Progress!
