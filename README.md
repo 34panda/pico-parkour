@@ -1,3 +1,3 @@
 # pico-parkour
-![cart](raiot.png)
+![cart](raiot.p8.png)
 Its a game made with pico-8 engine - WIP
