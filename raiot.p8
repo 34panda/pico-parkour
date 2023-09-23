@@ -8,7 +8,11 @@ __lua__
 function _init()
 --variables
 
-	game_state="menu"
+	game_state="game"
+	soundtrack="cave"
+	show_dialog=false
+	dialog="who are you,\ni am from ancient greece!"
+	music(20)
 	
 	plr={
 		--looks
@@ -64,25 +68,84 @@ function _init()
     {x=17,y=34,collected=false},	
 		}
 	}
-		
-	--mushroom wizard table
-	wzrd={
-		anim=time(),
-		sp=31,
+	----------wizards--------------
+	wzrds={
+		--mushroom wizard table
+		wzrd={
+			anim=time(),
+			sp=35,
+			x=10,
+			y=23,
+			flp=false,
+			dialog={
+			"how did you get here?",
+			"mushrooms are great!",
+			"😐",
+			},
+		},
+		--second mushroom wizard table
+		wzrd_2={
+			anim=time(),
+			sp=35,
+			x=52,
+			y=16,
+			flp=true,
+			dialog={
+			"i made those crystals myself, took me some time!",
+			"mushrooms are terrible!",
+			"★",
+			},
+		},
+		--sand wizard table
+		snd_wzrd={
+			sp=222,
+			x=50,
+			y=22,
+			flp=false,
+			dialog={
+			"you seem to be strong enough to go against the sand curse i placed arund this area",
+			"go away, its the only place i can focus!",
+			"∧",
+			},
+		},
+		--ice wizard table
+		ice_wzrd={
+			sp=14,
+			x=46,
+			y=10,
+			flp=false,
+			dialog={
+			"did you hear about the golden cat's around here, they seem to be dug from ground after being forgotten, poor things.",
+			"you seem storng to be able to resist my blizzard curse, i'm impressed!",
+			"🐱",
+			},
+		},
+		--haunt wizard table
+		haunt_wzrd={
+			sp=12,
+			x=53,
+			y=46,
+			flp=false,
+			dialog={
+			"boooooooooooooo",
+			"🅾️∧░⌂(😐",
+			"●",
+			},
+		},
+		--second haunt wizard table
+		haunt_wzrd_2={
+			sp=12,
+			x=1,
+			y=37,
+			flp=true,
+			dialog={
+			"what are you doing im my house?",
+			"its so calm up here, sand wizard keeps bothering me to let him stay here!",
+			"ˇ",
+			},
+	 },
 	}
-	--sand wizard table
-	snd_wzrd={
-		sp=222,
-	}
-	--ice wizard table
-	ice_wzrd={
-		sp=14,
-	}
-	--haunt wizard table
-	haunt_wzrd={
-		sp=12,
-	}
-	
+	----------particles------------
 	--sparkle table
 	sparkle={
 		anim=time(),
@@ -109,7 +172,14 @@ function _init()
 		magnitude=1,
 		anim=0 
 	}
-
+	
+	--circle
+	circle={
+		anim=time(),
+		switch=false,
+		rad=0,
+		n=0,
+	}
 	
 	--forces
 	gravity=0.3
@@ -163,7 +233,9 @@ function update_menu()
 	wzrd_animate()
 	if btnp(❎) or btnp(🅾️) then
 		do_shake(10,10)
+		music(-1,3000)
 		game_state="game"
+		music(0,0,1)
 	end
 end
 
@@ -177,6 +249,7 @@ function update_game()
 	snd_animate()
 	sparkle_animate()
 	snow_animate()
+	circle_animate()
 
   --simple camera
   cam_x=plr.x-64+(plr.w/2)
@@ -342,13 +415,11 @@ function draw_sky()
 end
 
 function draw_wzrds()
-		spr(wzrd.sp,10*8,23*8,1,1)
-  spr(wzrd.sp,52*8,16*8,1,1,true)
-  spr(snd_wzrd.sp,50*8,22*8,1,1)
-  spr(ice_wzrd.sp,46*8,10*8,1,1)
-  spr(haunt_wzrd.sp,(53*8)+1,46*8,1,1)
-  spr(haunt_wzrd.sp,(0.5*8)+1,37*8,1,1,true)
+	for _, wzrd in pairs(wzrds) do
+		mset(wzrd.x, wzrd.y, wzrd.sp)
+	end
 end
+
 
 function draw_sparkles()
 		--sparkles
@@ -426,6 +497,29 @@ function draw_snow()
 		spr(56,(44+i)*8,10*8)
 	end
 	rectfill(45.5*8,10*8,47.2*8,11*8,1)
+end
+
+
+---------print dialog-----------
+
+function print_dialog()
+	rectfill(
+	cam_x+(9),
+	cam_y+(84),
+	cam_x+(119),
+	cam_y+(116),
+	13)
+	rectfill(
+	cam_x+(10),
+	cam_y+(85),
+	cam_x+(118),
+	cam_y+(115),
+	0)
+	oprint(
+	dialog,
+	cam_x+(13),
+	cam_y+(88),
+	7,13)
 end
 
 
@@ -512,11 +606,13 @@ function plr_update()
     plr.dx -= plr.acc
     plr.running = true
     plr.flp = true
+    show_dialog=false
   end
   if btn(➡️) then
     plr.dx += plr.acc
     plr.running = true
     plr.flp = false
+    show_dialog=false
   end
   
   --slide
@@ -532,16 +628,18 @@ function plr_update()
   --jump
   if (btnp(❎) or btnp(⬆️))
   and plr.landed then
+  		sfx(8)
     plr.dy -= plr.boost
     plr.landed = false
     plr.jumping = true
+    show_dialog=false
   end
   
-  --interact with doors
+  --interact with world
   if btnp(🅾️)
   then
   	open_path()
-  
+  	talk()  
   end
   
   --check for collision up & down
@@ -665,18 +763,22 @@ end
 
 --animate wizards! (they are so wise)
 function wzrd_animate()
-	if time()-wzrd.anim>.6 then
-	 wzrd.anim=time()
-	 if wzrd.sp==35 then
-	  wzrd.sp=51
-	  snd_wzrd.sp=222
-	  ice_wzrd.sp=14
-	  haunt_wzrd.sp=12
+	if time()-wzrds.wzrd.anim>.6 then
+	 wzrds.wzrd.anim=time()
+	 if wzrds.wzrd.sp==35 then
+	  wzrds.wzrd.sp=51
+	  wzrds.wzrd_2.sp=51
+	  wzrds.snd_wzrd.sp=222
+	  wzrds.ice_wzrd.sp=14
+	  wzrds.haunt_wzrd.sp=12
+	  wzrds.haunt_wzrd_2.sp=12
 	 else
-	 	wzrd.sp=35
-	 	snd_wzrd.sp=223
-  	ice_wzrd.sp=15
-  	haunt_wzrd.sp=13
+	 	wzrds.wzrd.sp=35
+	 	wzrds.wzrd_2.sp=35
+	 	wzrds.snd_wzrd.sp=223
+  	wzrds.ice_wzrd.sp=15
+  	wzrds.haunt_wzrd.sp=13
+  	wzrds.haunt_wzrd_2.sp=13
 	 end
 	end
 end
@@ -761,7 +863,31 @@ function animate_menu_bg()
 	 
 	end
 end
+
+--player circle effect
+function draw_circle()
+	circfill(plr.x+4,plr.y+4,circle.rad,4)
+end
+--
+function circle_animate()
+	if time()-circle.anim>.001 then
+	 circle.anim=time()
+	 circle.n+=1
+	 if circle.n==0 then
+	 	circle.switch = not circle.switch
+	 	n=0
+	 end
+	 if circle.switch then
+	 	circle.rad-=1
+	 else
+	 	circle.rad+=1
+	 end
+	end
+end
+
 -->8
+--interaction functions
+
 function open_path()
  local directions = {"down", "right", "left", "up"}
  for _, dir in ipairs(directions) do
@@ -809,21 +935,21 @@ end
 
 
 function pick_up_key()
-  local directions = {"down", "right", "left", "up"}
-  for _, k in pairs(key.keys) do
-    if not k.collected then
-      for _, dir in ipairs(directions) do
-        local collided, col_x, col_y = collide_map(plr, dir, key_flag) -- replace key_flag with actual flag for the key
-        if collided and col_x == k.x and col_y == k.y then
-          k.collected = true
-          plr.keys += 1
-          sfx(3)
-          mset(col_x, col_y, 0)
-          return -- exit the function once a key is picked up.
-        end
-      end
+	local directions = {"down", "right", "left", "up"}
+ for _, k in pairs(key.keys) do
+  if not k.collected then
+   for _, dir in ipairs(directions) do
+   local collided, col_x, col_y = collide_map(plr, dir, 4)
+    if collided and col_x == k.x and col_y == k.y then
+     k.collected = true
+     plr.keys += 1
+     sfx(3)
+     mset(col_x, col_y, 0)
+     return -- exit the function once a key is picked up.
     end
+   end
   end
+ end
 end
 
 
@@ -871,20 +997,23 @@ function check_shake()
  end
 end
 
+---------dialog---------------------
+
+
 function talk()
 	local directions = {"down", "right", "left", "up"}
- 
- for _, dir in ipairs(directions) do
-  local collided, col_x, col_y = collide_map(plr, dir, 5)
-  if collided and mget(col_x, col_y)==6 then
-  	sfx(1)
+ for _, w in pairs(wzrds) do
+   for _, dir in ipairs(directions) do
+   local collided, col_x, col_y = collide_map(plr, dir, 6)
+    if collided and col_x == w.x and col_y == w.y then
+     dialog="buttercakes"
+     show_dialog=true
+     sfx(3)
+     return -- exit the function once a key is picked up.
+   end
   end
  end
 end
-
-
-
-
 -->8
 --menu screen & end screen
 
@@ -938,6 +1067,7 @@ function draw_game()
   -- draw the background
   bg(cam_x * .2, cam_y * .2)  -- the 0.5 value will make the background move at half the speed
   draw_sky()
+  draw_circle()
   
   --entities, map and camera
   camera(cam_x, cam_y)
@@ -946,9 +1076,11 @@ function draw_game()
   draw_snow()
   map(0, 0)
   draw_keys()
-  draw_wzrds(
+  draw_wzrds()
   spr(plr.sp,plr.x,plr.y,1,1,plr.flp)
-)
+		if show_dialog then
+			print_dialog()
+		end
   
   -- reset camera for ui or other static elements
   camera()
@@ -1262,7 +1394,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 55555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555
 
 __gff__
-0000000000000000000001014040404013131313130303030303000000000303400101400303010103030000002303030000004001010303000700000003030303030303030303030303030303030303030303030000000303030303000000030101010101010000000000000000000000000000000100000101010101400303
+0000000000000000000001014040404013131313130303030303000000000303400101400303010103030000002303030000004001010303000700000003030303030303030303030303030303030303030303030000000303030303000000030101010101010000000000080008000000000000000100000101010101400303
 03030300000000000000000000000000000000000000000000000000000000070000000000000000000000000000070700000000000000000000000000000b00000000000000000000000000000000000000000000000000000000000000404000000000000000000000000000000b0000000000000000000000000000000808
 __map__
 1a382a00000000003800000000002a000000003800000038002a001a7a786179786179787b38380000000000003a0000006d545664565050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -1304,6 +1436,7 @@ __sfx__
 100500003007000000350703507035070350603505035050350303501000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 090500002d63000600006002061023600006000060000600006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0210000000600386403865036650326402d640256601f6601b65018600176201663015650146601565021640166401764018640196401a6401b6501d6501e65020650216501f6501e65022650006000060000600
-030500001165000000000000000000000000000000017650000000000000000000000000000000000000000000000216500000000000000000000034650000000000015650000000000000000000000000000000
+020500001165000000000000000000000000000000017650000000000000000000000000000000000000000000000216500000000000000000000034650000000000015650000000000000000000000000000000
 8e0200001c6501f6502166022660216601d6601a660196701867017670176701a6601e6602165022650226501f6501b6501765016650176401b6401f63022630216301d6201a62018610186101e6102161022610
-4e0200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+18010500096100f3101331017310183100f30012300153001730017300153002230022300223002030021300233002630028300293002a3002c3002e3003030000300343003630037300393003c3003d30000300
+000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
