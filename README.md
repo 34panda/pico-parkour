@@ -1,6 +1,6 @@
 # pico-parkour
 
-![cart](raiot.png "width=200px")
+![cart](raiot.p8.png "width=200px")
 
 The entire game data it contained within PNG image above!
 
