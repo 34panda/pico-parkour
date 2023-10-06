@@ -1,4 +1,4 @@
-# pico-parkour
+# PLAY IT [HERE](https://34panda.github.io/pico-parkour/)
 
 ![cart](raiot.p8.png "width=200px")
 
